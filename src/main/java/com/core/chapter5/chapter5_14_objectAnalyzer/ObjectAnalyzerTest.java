@@ -5,7 +5,7 @@ import com.core.chapter5.chapter5_15_objectAnalyzer.ObjectAnalyzer;
 import java.util.ArrayList;
 
 /**
- * 这个程序用反射分析对象
+ * 这个程序用反射分析对象，分析对象的数据类型，和其中的变量数据类型和值
  * @Author: 020188
  * @Date: 2019/10/28
  */
