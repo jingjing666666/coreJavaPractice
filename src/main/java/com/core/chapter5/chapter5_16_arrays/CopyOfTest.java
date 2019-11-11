@@ -49,7 +49,7 @@ public class CopyOfTest {
      * @param newLength 新数组长度
      * @return 返回一个更大的数组包括原数组所有的长度,但是返回的数组类型不是b的数组类型而是Object
      */
-    public static Object[] badCopyOf(Object[] b,int newLength) {
+    public static Object[] badCopyOf(Object[] b,int newLength) {//不能使用
         Object[] newArray = new Object[newLength];
         System.arraycopy(b,0,newArray,0,Math.min(newLength,b.length));
         return newArray;
