@@ -53,6 +53,7 @@ class TalkingClock{
      * 内部类TimerPrinter
      */
     public class TimePrinter implements ActionListener{
+
         @Override
         public void actionPerformed(ActionEvent e) {
             System.out.println(" At the stone, the time is "+new Date());
