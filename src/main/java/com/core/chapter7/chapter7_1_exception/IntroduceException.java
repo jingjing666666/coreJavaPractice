@@ -2,6 +2,8 @@ package com.core.chapter7.chapter7_1_exception;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.EmptyStackException;
+import java.util.logging.Logger;
 
 /**
  * 如果一个用户在运行程序期间，由于程序的错误或一些外部环境的影响造成用户数据丢失
@@ -362,18 +364,193 @@ import java.io.IOException;
  * 三、使用异常机制的技巧
  * 异常机制的技巧
  * 1.异常处理不能代替简单的测试
+ * 作为示例，这里编写了一段代码，试着对一个空栈进行退栈操作，在实施退栈操作之前，首先要查看栈是否为空
+ * if(!s.empty()){
+ *     s.pop();
+ * }
+ *
+ * 如果用异常是
+ * try{
+ *
+ * }catch(EmptyStackException){
+ *
+ * }
+ * 调用isEmpty方法的运行时间是646毫秒，捕获EmptyStackException的异常时间是21739毫秒
+ * 捕获异常所花费的时间大大超过了前者，所以使用异常的基本规则是：只在异常情况下使用异常机制
+ *
  * 2.不要过分的细化异常
+ * 很多程序员习惯将每一条语句都分装在独立的try语句块中，例：
+ * PrintStream out;
+ * Stack s;
+ * for(int i=0;i<100;i++){
+ *     try{
+ *         n = s.pop();
+ *     }catch(EmptyStackException e){
+ *         //stack was empty
+ *     }
+ *     try{
+ *         out.writeInt(n)
+ *     }catch(IOException e){
+ *        // problem writing to file
+ *     }
+ * }
+ * 这种编程方式将导致代码量的急剧膨胀，这段代码的意思是在栈中弹出100个数值，然后写入文件中
+ * 如果栈是空的，不会变成非空状态，如果文件出现错误也很难给予排除，出现上述问题后，这种编程方式无能为力，
+ * 因此有必要将整个任务包装在try语句块中，这样当任何一个操作出现问题时，整个任务都可以取消
+ * try{
+ *     for(int i=0;i<100;i++){
+ *         n = s.pop();
+ *         out.writeInt(n);
+ *         }
+ *     }catch(EmptyStackException e){
+ *          //stack was empty
+ *     }catch(IOException e){
+ *         //problem writing to file
+ *     }
+ *
+ *     这段代码看起来清晰多了，也满足异常处理机制的其中一个目标：将正常处理与错误处理分开
+ *
  * 3.利用异常层次结构
+ *
+ * 不要只抛出RunTimeException异常，应该寻找更加适当的子类或创建自己的异常类，
+ * 不要只捕获Throwable异常，否则会使程序代码更难读，更难维护。
+ * 考虑受查异常与非受查异常的区别，已检查异常本身就很庞大，不要为逻辑错误抛出这些异常。
+ * 将一种异常转换为另一种更加合适的异常时不要犹豫，比如在解析某个文件的一个整数时，抛出NumberFormatExcep，
+ * 就可以转换为IOException或 MySubsystemException的子类
  * 4.不要压制异常
+ * 在Java中，往往强烈的倾向关闭异常，如果编写了一个调用另一个方法的方法，而这个方法有可能100年才发生异常，那么
+ * 编译器会因为没有将异常列在throws列表中产生抱怨，应该采用try catch语句将异常捕获，
+ * public Image loadImage(String s){
+ *     try{
+ *
+ *     }catch(Exception e){
+ *
+ *     }
+ * }
+ * 现在这段代码就可以编译通过了，发生异常执行catch子句中的代码后，继续执行剩下语句
  * 5.在检测错误时，苛刻要比放任好
+ * 在出错的地方抛出一个EmptyStackException比在后面获取NullPointerException要好
  * 6.不要羞于传递异常
+ * 很多程序员都感觉应该捕获抛出的全部异常，如果调用了一个抛出异常的方法，例如，FileInputStream构造器
+ * 或者readLine方法，这些方法会本能的捕获所有产生的异常
+ * 其实传递异常要比捕获异常更好，
+ * public void readStaff(String s) throws IOException{
+ *     InputStream in = new FileInputStream("...");
+ * }
+ * 让高层次的方法通知用户发生了错误，或者放弃不成功的命令更加适合
  * 5.6可以归纳为“早抛出晚处理”
+ *
+ * 二断言
+ * 1.断言的概念
+ * 假设确信某个属性符合要求，并且代码的执行依赖于这个属性，例如：
+ * double y = Math.sqrt(x);
+ * 我们确信，这里的x是一个非负数值，原因是x是另一个计算结果，而这个结果是一个非负数值，
+ * 或者x是一个方法的参数，而这个方法要求它的调用者只能是非负数，然而还是希望进行检查，以避免
+ * x不是非负数，也可以抛出一个异常
+ * if(x<0) throw IllegalArgumentException("x<0");
+ * 程序中含有大量的这种检查运行起来特别慢，断言机制允许在测试期间向代码中插入一些检查语句，当代码发布时
+ * 插入的检查会自动移走
+ * Java语言引入了关键字assert，这个关键字有两种形式，
+ * assert条件；
+ * assert 条件：表达式；
+ * 这两种形式都会对条件进行检测，如果结果为false，则抛出一个AssertionError异常，
+ * 第二种形式，表达式会被传入AssertionError构造器中，并转换成一个消息字符串。
+ * 断言x是一个非负数值
+ * assert x>=0;
+ *
+ * 或者
+ * 将x的实际值传递给AssertionError对象，从而在后面显示出来
+ * assert x>=0:x;
+ *
+ * 2.启用和禁用断言
+ * 在默认情况下断言被禁用，
+ * java -enableassertions Myapp  开启断言
+ * 启用和禁用断言是类加载器（classloader）的功能，当断言被禁用时，类加载器将跳过断言代码，
+ * 因此，不会降低程序的运行速度
+ *
+ * 3.使用断言完成参数检查
+ * 在Java中，给了三种处理系统错误的机制
+ * 1.抛出一个异常
+ * 2.日志
+ * 3.使用断言
+ * 什么时候应该选择使用断言，请记住以下几点，
+ * 1.断言失败是致命的不可恢复的错误
+ * 2.断言检查只用于开发和测试
+ * 事实上，由于可以使用断言，当方法被非法调用时，会抛出断言错误或者抛出空指针异常，
+ * 取决于类加载器的配置
+ *
+ * 4.为文档假设使用断言
+ *
+ *
+ * 三 记录日志
+ * 1.一般大多数程序员都在有问题的代码插入System.out.println方法调用来观察程序的运行过程，
+ * 记录日志API就是为解决这个问题的，记录日志API的优点
+ * 1.可以很容易的取消全部日志记录，或者仅仅取消某个级别的日志，而且打开和关闭也很容易
+ * 2.可以很简单的禁止日志记录的输出，将日志代码留在程序中的开销很小
+ * 3.日志记录可以被定向到不同的处理器中，用于在控制台显示，或者存储于文件中
+ * 4.日志记录器和日志处理器都可以对日志进行过滤
+ * 5.日志记录可以采用不同的方式格式化，例如纯文本或xml
+ * 6.应用程序可以使用多个日志记录器，使用类似包名具有层次结构的名字，例：com.mycompany.myapp
+ * 7.默认情况下，日志系统的配置由配置文件控制，如果需要，应用程序可以替换这个配置
+ *
+ * 1.基本日志
+ * 要生成简单的日志记录，可以调用全局日志记录器（global logger）并调用其info
+ *  Logger.getGlobal().info("file open menu item selected");
+ *  默认情况下，这条记录显示以下内容
+ *  十二月 12, 2019 10:21:57 下午 com.core.chapter7.chapter7_1_exception.IntroduceException main
+ *  信息: file open menu item selected
+ *  但如果在适当的地方（如main开始）调用
+ *  Logger.getGlobal().setLevel(Level.OFF)
+ *  将会取消所有的日志
+ *
+ *  2.高级日志
+ *  从前面已经看到虚拟日志，下面继续看一下企业级日志，在一个专业的应用程序中，
+ *  不要将所有的日志都记录到全局日志记录器中，而是可以自定义日志记录器，可以调用
+ *  getLogger方法创建或获取日志记录器，
+ *  private final static Logger myLogger = Logger.getLogger("com.mycompany.myapp")
+ *  未被任何变量引用的日志记录器可能会被垃圾回收，为了防止这种情况发生，要用一个静态
+ *  变量存储日志记录器的一个引用
+ *  与包名类似，日志记录器名也有层次结构，事实上，与包名相比，日志记录器的层次性更强
+ *  对于包来说，包的名字和父包的名字没有语义关系，但是日志记录器的父与子之间共享某些属性，
+ *  例如，对 com.mycompany.myapp日志记录器设置了日志级别，他的子记录器也会记录这个级别
+ *  通常有以下7个日志记录器级别：
+ *  SERVER
+ *  WARNING
+ *  INFO
+ *  CONFIG
+ *  FINE
+ *  FINER
+ *  FINEST
+ *  在默认情况下只记录前三个级别。也可以设置其他级别，比如，
+ *  logger.setLevel(Level.fine);
+ *  现在FINE和更高级别的记录都可以记录下来。
+ *  还可以使用Level.all开启所有级别的日志，或者Level.off关闭所有级别的日志记录
+ *  默认的日志记录将显示包含日志调用的方法名和类名，如同堆栈所显示的那样，
+ *  但是如果虚拟机对执行过程进行了优化，就得不到准确的调用信息
+ *
+ * 3.修改日志管理器配置
+ * 可以通过编辑配置文件来修改日志处理器的各种属性，在默认情况下，配置文件存在于 jre/lib/logging.properties
+ * 要想使用另一个配置文件，就要将 java.util.logging.config.file特性设置为配置文件的存储位置
+ * 并用下列命令 java -Djava.util.logging.config.file=configFile MainClass
+ * 可以通过以下命令来指定自己的日志记录器级别
+ * com.mycompany.myapp.level= FINE
+ *
+ * 5.处理器
+ * 在默认情况下，日志记录器将记录发送到ConsoleHandle中，并由它输出到System.err流中，日志记录器
+ * 还会将日志记录发送到父处理器中，而最终的处理器有一个ConsoleHandle
+ * 与日志记录器一样，处理器也有日志记录级别，对于一个要被记录的日志记录，它的日志记录级别必须高于
+ * 日志记录器和处理器的阈值
+ * 6.过滤器
+ * 7.格式化器
+ *
  *
  * Created by yuanqingjing on 2019/12/3
  */
 public class IntroduceException {
     public static void main(String[] args) {
-        Throwable t = new Throwable();
-        t.printStackTrace();
+
+//        Throwable t = new Throwable();
+//        t.printStackTrace();
+        Logger.getGlobal().info("file open menu item selected");
     }
 }
